@@ -55,6 +55,8 @@ List<HistorialGeneralItem> _generateRawRecords(
         bitDfechRegistro: '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}T10:00:00',
         vehVplaca: vehicleName,
         vehVmarca: 'Marca $vIdx',
+        accVmarca: '',
+        accVcodigoFabricante: '',
         bitIkilometraje: 100000 + (i * 1000),
         bitIcantidad: random.nextInt(3) + 1,
         dicVnombre: accName,

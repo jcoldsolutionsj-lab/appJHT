@@ -17,6 +17,13 @@ class HistorialDataTable extends StatefulWidget {
 class _HistorialDataTableState extends State<HistorialDataTable> {
   int _currentPage = 1;
   int _itemsPerPage = 5;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   List<HistorialGeneralItem> get _paginatedItems {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
@@ -54,12 +61,18 @@ class _HistorialDataTableState extends State<HistorialDataTable> {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            return Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true, // Para desktop
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
                 child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(const Color(0xFF303366)),
+                  headingRowColor: WidgetStateProperty.all(
+                    const Color(0xFF303366),
+                  ),
                   headingTextStyle: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -69,6 +82,7 @@ class _HistorialDataTableState extends State<HistorialDataTable> {
                   columns: const [
                     DataColumn(label: Text('Fecha')),
                     DataColumn(label: Text('Vehículo')),
+                    DataColumn(label: Text('Marca / Código')),
                     DataColumn(label: Text('Accesorio / Repuesto')),
                     DataColumn(label: Text('Proveedor')),
                     DataColumn(label: Text('Monto')),
@@ -78,38 +92,82 @@ class _HistorialDataTableState extends State<HistorialDataTable> {
                     final index = entry.key;
                     final item = entry.value;
                     final isEven = index % 2 == 0;
-                    
+
                     return DataRow(
                       color: WidgetStateProperty.all(
                         isEven ? const Color(0xFFF7F8FC) : Colors.white,
                       ),
                       cells: [
                         DataCell(Text(item.bitDfechRegistro.split('T').first)),
-                        DataCell(Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(item.vehVplaca, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            Text(item.vehVmarca, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        )),
-                        DataCell(Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(item.dicVnombre),
-                            Text(item.tipVnombre, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
-                        )),
+                        DataCell(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                item.vehVplaca,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                item.vehVmarca,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataCell(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                item.accVmarca.isNotEmpty ? item.accVmarca : 'N/A',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                item.accVcodigoFabricante.isNotEmpty ? item.accVcodigoFabricante : 'N/A',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataCell(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(item.dicVnombre),
+                              Text(
+                                item.tipVnombre,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         DataCell(Text(item.proVrazonSocial)),
-                        DataCell(Text('S/${item.gasBmonto.toStringAsFixed(2)}')),
+                        DataCell(
+                          Text('S/${item.gasBmonto.toStringAsFixed(2)}'),
+                        ),
                         DataCell(_buildStatusBadge(item.hisVestado)),
                       ],
                     );
                   }).toList(),
                 ),
               ),
-            );
+            ));
           },
         ),
         if (widget.data.length > _itemsPerPage)

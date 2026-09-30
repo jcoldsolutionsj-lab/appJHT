@@ -4,6 +4,8 @@ class HistorialGeneralItem {
   final String bitDfechRegistro;
   final String vehVplaca;
   final String vehVmarca;
+  final String accVmarca;
+  final String accVcodigoFabricante;
   final int bitIkilometraje;
   final int bitIcantidad;
   final String dicVnombre;
@@ -30,6 +32,8 @@ class HistorialGeneralItem {
     required this.bitDfechRegistro,
     required this.vehVplaca,
     required this.vehVmarca,
+    required this.accVmarca,
+    required this.accVcodigoFabricante,
     required this.bitIkilometraje,
     required this.bitIcantidad,
     required this.dicVnombre,
@@ -58,6 +62,8 @@ class HistorialGeneralItem {
       bitDfechRegistro: json['bit_dfech_registro'] ?? '',
       vehVplaca: json['veh_vplaca'] ?? '',
       vehVmarca: json['veh_vmarca'] ?? '',
+      accVmarca: json['acc_vmarca'] ?? '',
+      accVcodigoFabricante: json['acc_vcodigo_fabricante'] ?? '',
       bitIkilometraje: json['bit_ikilometraje'] ?? 0,
       bitIcantidad: json['bit_icantidad'] ?? 0,
       dicVnombre: json['dic_vnombre'] ?? '',

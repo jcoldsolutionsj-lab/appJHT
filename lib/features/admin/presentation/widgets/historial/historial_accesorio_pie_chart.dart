@@ -17,33 +17,34 @@ class HistorialAccesorioPieChart extends StatefulWidget {
 class _HistorialAccesorioPieChartState extends State<HistorialAccesorioPieChart> {
   int touchedIndex = -1;
   Timer? _hideTimer;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
     _hideTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
   void _handleTouch(FlTouchEvent event, PieTouchResponse? pieTouchResponse) {
-    setState(() {
-      if (!event.isInterestedForInteractions ||
-          pieTouchResponse == null ||
-          pieTouchResponse.touchedSection == null) {
-        
-        // Iniciar o reiniciar el timer de 3 segundos para limpiar
-        _hideTimer?.cancel();
-        _hideTimer = Timer(const Duration(seconds: 3), () {
-          if (mounted) {
-            setState(() {
-              touchedIndex = -1;
-            });
-          }
-        });
-        return;
-      }
+    if (!event.isInterestedForInteractions ||
+        pieTouchResponse == null ||
+        pieTouchResponse.touchedSection == null ||
+        pieTouchResponse.touchedSection!.touchedSectionIndex == -1) {
       
-      // Si el mouse entra, cancelamos el timer y actualizamos el índice
       _hideTimer?.cancel();
+      _hideTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            touchedIndex = -1;
+          });
+        }
+      });
+      return;
+    }
+    
+    _hideTimer?.cancel();
+    setState(() {
       touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
     });
   }
@@ -76,10 +77,14 @@ class _HistorialAccesorioPieChartState extends State<HistorialAccesorioPieChart>
       return Column(
         children: [
           Expanded(
+            flex: 2,
             child: _buildPieChart(),
           ),
           const SizedBox(height: 16),
-          _buildLegend(),
+          Expanded(
+            flex: 1,
+            child: _buildLegend(),
+          ),
         ],
       );
     }
@@ -155,8 +160,12 @@ class _HistorialAccesorioPieChartState extends State<HistorialAccesorioPieChart>
   }
 
   Widget _buildLegend() {
-    return SingleChildScrollView(
-      child: Column(
+    return Scrollbar(
+      controller: _scrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: widget.data.asMap().entries.map((entry) {
@@ -191,6 +200,7 @@ class _HistorialAccesorioPieChartState extends State<HistorialAccesorioPieChart>
             ),
           );
         }).toList(),
+      ),
       ),
     );
   }

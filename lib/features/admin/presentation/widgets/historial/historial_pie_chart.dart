@@ -17,33 +17,34 @@ class HistorialPieChart extends StatefulWidget {
 class _HistorialPieChartState extends State<HistorialPieChart> {
   int touchedIndex = -1;
   Timer? _hideTimer;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
     _hideTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
   void _handleTouch(FlTouchEvent event, PieTouchResponse? pieTouchResponse) {
-    setState(() {
-      if (!event.isInterestedForInteractions ||
-          pieTouchResponse == null ||
-          pieTouchResponse.touchedSection == null) {
-        
-        // Iniciar o reiniciar el timer de 3 segundos para limpiar
-        _hideTimer?.cancel();
-        _hideTimer = Timer(const Duration(seconds: 3), () {
-          if (mounted) {
-            setState(() {
-              touchedIndex = -1;
-            });
-          }
-        });
-        return;
-      }
+    if (!event.isInterestedForInteractions ||
+        pieTouchResponse == null ||
+        pieTouchResponse.touchedSection == null ||
+        pieTouchResponse.touchedSection!.touchedSectionIndex == -1) {
       
-      // Si el mouse entra, cancelamos el timer y actualizamos el índice
       _hideTimer?.cancel();
+      _hideTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            touchedIndex = -1;
+          });
+        }
+      });
+      return;
+    }
+    
+    _hideTimer?.cancel();
+    setState(() {
       touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
     });
   }
@@ -216,10 +217,15 @@ class _HistorialPieChartState extends State<HistorialPieChart> {
         ),
         Expanded(
           flex: 1,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: widget.data.asMap().entries.map((entry) {
+          child: Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: widget.data.asMap().entries.map((entry) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
@@ -244,6 +250,8 @@ class _HistorialPieChartState extends State<HistorialPieChart> {
                 ),
               );
             }).toList(),
+          ),
+            ),
           ),
         ),
       ],
