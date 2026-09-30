@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:app_jht_front/features/shared/presentation/widgets/scaffold_with_menu.dart';
+import 'package:app_jht_front/core/services/version_checker_service.dart';
 
 class HelpPage extends StatelessWidget {
   final String userName;
@@ -48,12 +49,11 @@ class HelpPage extends StatelessWidget {
         automaticallyImplyLeading: false,
         leading: isMobile
             ? IconButton(
-                icon: const Icon(
-                  Icons.menu_rounded,
-                  color: Colors.white,
-                ),
+                icon: const Icon(Icons.menu_rounded, color: Colors.white),
                 onPressed: () {
-                  context.findAncestorStateOfType<ScaffoldWithMenuState>()?.openMobileMenu();
+                  context
+                      .findAncestorStateOfType<ScaffoldWithMenuState>()
+                      ?.openMobileMenu();
                 },
               )
             : null,
@@ -87,7 +87,8 @@ class HelpPage extends StatelessWidget {
                     description:
                         'Acceso inmediato sin instalación desde cualquier navegador.',
                     badgeText: 'Online',
-                    onTap: () => _launchURL('https://appjht.onrender.com/'),
+                    onTap: () =>
+                        _launchURL('https://app.jhttransportelogistica.com/'),
                   ),
                   const SizedBox(height: 24),
                   _buildSectionTitle('Soporte y Acompañamiento'),
@@ -133,7 +134,7 @@ class HelpPage extends StatelessWidget {
               ],
             ),
             child: Image.asset(
-              'assets/icons/Jht.png',
+              'assets/images/JHTmarca-transparente.png',
               height: 80,
               errorBuilder: (context, error, stackTrace) => Icon(
                 Icons.directions_bus_filled_rounded,
@@ -161,7 +162,7 @@ class HelpPage extends StatelessWidget {
               border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
             child: const Text(
-              'Versión 1.0 • 01/05/2026',
+              'Versión ${VersionCheckerService.localVersion}',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 12,
@@ -435,9 +436,28 @@ class HelpPage extends StatelessWidget {
     return Column(
       children: [
         const Text(
+          '© 2026 JHT Transporte Mantenimiento',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Todos los derechos reservados. Aplicación de uso exclusivo.',
+          style: TextStyle(fontSize: 11, color: Colors.blueGrey[400]),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Desarrollado por',
+          style: TextStyle(fontSize: 11, color: Colors.blueGrey[400]),
+        ),
+        const SizedBox(height: 4),
+        const Text(
           'ColdSolutions TI',
           style: TextStyle(
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w900,
             fontSize: 16,
             color: Color(0xFF303366),
             letterSpacing: 1,
@@ -445,8 +465,8 @@ class HelpPage extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Soluciones tecnológicas para la gestión empresarial',
-          style: TextStyle(fontSize: 11, color: Colors.blueGrey[400]),
+          'Soluciones tecnológicas que impulsan tu negocio',
+          style: TextStyle(fontSize: 10, color: Colors.blueGrey[400]),
         ),
         const SizedBox(height: 12),
         Container(
@@ -464,7 +484,6 @@ class HelpPage extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 24),
         const SizedBox(height: 20),
       ],
     );

@@ -1,4 +1,5 @@
 // lib/features/home/presentation/pages/home_page.dart
+import 'dart:async';
 import 'package:app_jht_front/features/home/data/datasources/dashboard_service.dart';
 import 'package:flutter/material.dart';
 import 'package:app_jht_front/features/home/presentation/widgets/download_report_modal.dart';
@@ -21,15 +22,27 @@ class _HomePageState extends State<HomePage> {
   final DashboardService _dashboardService = DashboardService();
   bool _isLoading = true;
   Map<String, dynamic>? _dashboardData;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _loadData(isSilent: true);
+    });
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadData({bool isSilent = false}) async {
+    if (!isSilent) {
+      setState(() => _isLoading = true);
+    }
     try {
       final data = await _dashboardService.getDashboardData();
       if (mounted) {
@@ -41,7 +54,6 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        // Podríamos mostrar un error aquí
       }
     }
   }
@@ -164,7 +176,7 @@ class _HomePageState extends State<HomePage> {
           isAlert: (_dashboardData?['mantenimientosCount'] ?? 0) > 0,
         ),
         _buildKPICard(
-          title: 'Conductores',
+          title: 'Colaborador',
           value: '${_dashboardData?['conductores'] ?? 0}',
           subtitle: 'Registrados',
           icon: Icons.badge_rounded,

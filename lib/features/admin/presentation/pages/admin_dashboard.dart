@@ -3,9 +3,19 @@
 import 'package:app_jht_front/features/shared/presentation/mixins/dashboard_responsive_mixin.dart';
 import 'package:app_jht_front/features/shared/presentation/pages/base_dashboard.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:app_jht_front/features/home/data/datasources/dashboard_service.dart';
 import 'package:app_jht_front/features/home/presentation/widgets/download_report_modal.dart';
 import 'dart:ui';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:app_jht_front/core/network/http_client.dart';
+import 'package:app_jht_front/features/admin/presentation/bloc/historial/historial_mantenimiento_bloc.dart';
+import 'package:app_jht_front/features/admin/presentation/bloc/historial/historial_mantenimiento_event.dart';
+import 'package:app_jht_front/features/admin/data/repositories/admin_repository_impl.dart';
+import 'package:app_jht_front/features/admin/data/datasources/admin_remote_datasource.dart';
+import 'package:app_jht_front/features/accessory/domain/repositories/accessory_repository_impl.dart';
+import 'package:app_jht_front/features/accessory/data/datasources/accessory_remote_data_source.dart';
+import 'package:app_jht_front/features/admin/presentation/widgets/historial/historial_dashboard_view.dart';
 
 class AdminDashboard extends StatefulWidget {
   final String userName;
@@ -22,30 +32,43 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard>
-    with DashboardResponsiveMixin, SingleTickerProviderStateMixin {
+    with DashboardResponsiveMixin, TickerProviderStateMixin {
   final DashboardService _dashboardService = DashboardService();
   bool _isLoading = true;
   Map<String, dynamic>? _dashboardData;
   late AnimationController _animController;
+  late TabController _tabController;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Trigger rebuild on tab change
+    });
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
     _loadData();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _loadData(isSilent: true);
+    });
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    _tabController.dispose();
     _animController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadData({bool isSilent = false}) async {
+    if (!isSilent) {
+      setState(() => _isLoading = true);
+    }
     try {
       final data = await _dashboardService.getDashboardData();
       if (mounted) {
@@ -53,7 +76,9 @@ class _AdminDashboardState extends State<AdminDashboard>
           _dashboardData = data;
           _isLoading = false;
         });
-        _animController.forward(from: 0.0);
+        if (!isSilent) {
+          _animController.forward(from: 0.0);
+        }
       }
     } catch (e) {
       debugPrint('Error al cargar datos del dashboard: $e');
@@ -79,15 +104,17 @@ class _AdminDashboardState extends State<AdminDashboard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context, isDesktop),
+            const SizedBox(height: 24),
+
+            _buildTabBar(),
             const SizedBox(height: 32),
 
-            _buildStatsGrid(context),
-            const SizedBox(height: 32),
-
-            _buildChartsAndActivities(context, isDesktop),
-            const SizedBox(height: 32),
-
-            _buildRecentDataTable(context, isDesktop),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _tabController.index == 0
+                  ? _buildOperativoTab(context, isDesktop)
+                  : _buildAnaliticoTab(context, isDesktop),
+            ),
             const SizedBox(height: 40),
           ],
         );
@@ -160,7 +187,9 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _buildHeaderActions(bool isDesktop) {
     return Row(
-      mainAxisAlignment: isDesktop ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: isDesktop
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       children: [
         ElevatedButton.icon(
           onPressed: () {
@@ -213,6 +242,163 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
+  Widget _buildTabBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: const Color(0xFF303366),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF303366).withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: const Color(0xFF6B7280),
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        tabs: [
+          const Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.speed_rounded, size: 20),
+                SizedBox(width: 8),
+                Text('Operativo'),
+              ],
+            ),
+          ),
+          Tab(
+            child: Tooltip(
+              preferBelow: true,
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1B4B),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              richMessage: const TextSpan(
+                children: [
+                  TextSpan(
+                    text: '📊 Vista Analítica y Estratégica de Flota\n\n',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.white,
+                    ),
+                  ),
+                  TextSpan(
+                    text:
+                        '• ¿Qué ganas?: Visibilidad ejecutiva de costos mensuales, desglose gerencial y top de unidades.\n',
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                  TextSpan(
+                    text:
+                        '• ¿Qué previenes?: Sobrecostos por reparaciones correctivas tardías y fugas en el presupuesto.\n',
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                  TextSpan(
+                    text:
+                        '• Objetivo: Decidir con datos reales para reducir gastos y prolongar la vida útil de los vehículos.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFFDE047),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.analytics_rounded, size: 20),
+                  SizedBox(width: 8),
+                  Text('Analítico'),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 14,
+                    color: Colors.white70,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperativoTab(BuildContext context, bool isDesktop) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStatsGrid(context),
+        const SizedBox(height: 32),
+        // Aquí irán las tablas y widgets del Operativo (en desarrollo)
+        Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white),
+          ),
+          child: const Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.construction_rounded,
+                  size: 48,
+                  color: Color(0xFF94A3B8),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Dashboard Operativo en Construcción',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF475569),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Próximamente disponible, coordina con el equipo de Coldsolution TI para más información.',
+                  style: TextStyle(color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnaliticoTab(BuildContext context, bool isDesktop) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [_buildChartSection(context)],
+    );
+  }
+
   Widget _buildStatsGrid(BuildContext context) {
     final isMobileLocal = isMobile(context);
     final crossAxisCount = isMobileLocal
@@ -246,7 +432,7 @@ class _AdminDashboardState extends State<AdminDashboard>
         ),
         _buildAnimatedStatCard(
           1,
-          title: 'Conductores',
+          title: 'Colaborador',
           value: '$conductoresCount',
           subtitle: 'Personal activo',
           icon: Icons.badge_rounded,
@@ -341,94 +527,26 @@ class _AdminDashboardState extends State<AdminDashboard>
   }
 
   Widget _buildChartSection(BuildContext context) {
-    return _GlassContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Visión Operativa',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Este mes',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 250,
-            child: Stack(
-              children: [
-                // Simulación visual elegante de gráfico (Background gradient curve)
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CustomPaint(painter: _MockChartPainter()),
-                  ),
-                ),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(
-                          Icons.insert_chart_rounded,
-                          color: Color(0xFF4834D4),
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Módulo de Analítica en Desarrollo',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return BlocProvider(
+      create: (context) {
+        final httpClient = HttpClient();
+        final accessoryDataSource = AccessoryRemoteDataSourceImpl(
+          httpClient: httpClient,
+        );
+        final accessoryRepository = AccessoryRepositoryImpl(
+          remoteDataSource: accessoryDataSource,
+        );
+        final adminDataSource = AdminRemoteDataSourceImpl();
+        final adminRepository = AdminRepositoryImpl(
+          remoteDataSource: adminDataSource,
+        );
+
+        return HistorialMantenimientoBloc(
+          adminRepository: adminRepository,
+          vehicleRepository: accessoryRepository,
+        )..add(LoadHistorialEvent());
+      },
+      child: const HistorialDashboardView(),
     );
   }
 
@@ -969,76 +1087,6 @@ class _GlassContainer extends StatelessWidget {
   }
 }
 
-// Pintor personalizado para simular un gráfico bonito y premium
-class _MockChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          const Color(0xFF4834D4).withOpacity(0.2),
-          const Color(0xFF4834D4).withOpacity(0.0),
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final path = Path();
-    path.moveTo(0, size.height);
-    path.lineTo(0, size.height * 0.7);
-
-    // Curva suave
-    path.cubicTo(
-      size.width * 0.25,
-      size.height * 0.8,
-      size.width * 0.5,
-      size.height * 0.3,
-      size.width * 0.75,
-      size.height * 0.5,
-    );
-    path.quadraticBezierTo(
-      size.width * 0.9,
-      size.height * 0.6,
-      size.width,
-      size.height * 0.2,
-    );
-
-    path.lineTo(size.width, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
-
-    // Línea del gráfico
-    final linePaint = Paint()
-      ..color = const Color(0xFF4834D4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-
-    final linePath = Path();
-    linePath.moveTo(0, size.height * 0.7);
-    linePath.cubicTo(
-      size.width * 0.25,
-      size.height * 0.8,
-      size.width * 0.5,
-      size.height * 0.3,
-      size.width * 0.75,
-      size.height * 0.5,
-    );
-    linePath.quadraticBezierTo(
-      size.width * 0.9,
-      size.height * 0.6,
-      size.width,
-      size.height * 0.2,
-    );
-
-    canvas.drawPath(linePath, linePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 // ---------------------------------------------------------
 // COMPONENTES DE CARGA (SKELETON LOADER) DE ALTO IMPACTO
 // ---------------------------------------------------------
@@ -1050,7 +1098,9 @@ class _DashboardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width > 800;
     final isMobileLocal = MediaQuery.sizeOf(context).width < 600;
-    final crossAxisCount = isMobileLocal ? 1 : (MediaQuery.sizeOf(context).width < 1200 ? 2 : 4);
+    final crossAxisCount = isMobileLocal
+        ? 1
+        : (MediaQuery.sizeOf(context).width < 1200 ? 2 : 4);
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -1074,7 +1124,7 @@ class _DashboardSkeleton extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 32),
-          
+
           // Cards Skeleton
           GridView.count(
             shrinkWrap: true,
@@ -1083,7 +1133,14 @@ class _DashboardSkeleton extends StatelessWidget {
             crossAxisSpacing: 20,
             mainAxisSpacing: 20,
             childAspectRatio: isMobileLocal ? 2.2 : 1.6,
-            children: List.generate(4, (index) => _SkeletonBox(width: double.infinity, height: double.infinity, borderRadius: 20)),
+            children: List.generate(
+              4,
+              (index) => _SkeletonBox(
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: 20,
+              ),
+            ),
           ),
           const SizedBox(height: 32),
 
@@ -1092,17 +1149,39 @@ class _DashboardSkeleton extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 3, child: _SkeletonBox(width: double.infinity, height: 350, borderRadius: 20)),
+                Expanded(
+                  flex: 3,
+                  child: _SkeletonBox(
+                    width: double.infinity,
+                    height: 350,
+                    borderRadius: 20,
+                  ),
+                ),
                 const SizedBox(width: 24),
-                Expanded(flex: 2, child: _SkeletonBox(width: double.infinity, height: 350, borderRadius: 20)),
+                Expanded(
+                  flex: 2,
+                  child: _SkeletonBox(
+                    width: double.infinity,
+                    height: 350,
+                    borderRadius: 20,
+                  ),
+                ),
               ],
             )
           else
             Column(
               children: [
-                _SkeletonBox(width: double.infinity, height: 350, borderRadius: 20),
+                _SkeletonBox(
+                  width: double.infinity,
+                  height: 350,
+                  borderRadius: 20,
+                ),
                 const SizedBox(height: 24),
-                _SkeletonBox(width: double.infinity, height: 300, borderRadius: 20),
+                _SkeletonBox(
+                  width: double.infinity,
+                  height: 300,
+                  borderRadius: 20,
+                ),
               ],
             ),
           const SizedBox(height: 32),
@@ -1134,7 +1213,7 @@ class _SkeletonBox extends StatelessWidget {
       curve: Curves.easeInOutSine,
       builder: (context, value, child) {
         // En lugar de usar repeat directamente (que no existe en TweenAnimationBuilder nativamente),
-        // usamos un truco con un contenedor animado simulando el pulso (o en su defecto, 
+        // usamos un truco con un contenedor animado simulando el pulso (o en su defecto,
         // simplemente dejamos el contenedor estático claro que se ve muy elegante también).
         // Para ser nativo 100% y sin errores, haremos un contenedor brillante simple:
         return Container(

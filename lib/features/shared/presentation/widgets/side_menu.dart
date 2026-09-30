@@ -104,29 +104,10 @@ class SideMenu extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'JHT',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF303366),
-                  letterSpacing: -1,
-                  height: 1,
-                ),
-              ),
-              Text(
-                'TRANSPORT',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF4834D4),
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
+          Image.asset(
+            'assets/images/JHTmarca-transparente.png',
+            height: 45, // Altura ajustada profesionalmente
+            fit: BoxFit.contain,
           ),
           Material(
             color: Colors.transparent,
@@ -274,15 +255,6 @@ class SideMenu extends StatelessWidget {
             onClose();
             _showLogoutConfirmation(context);
           }),
-          const SizedBox(height: 12),
-          Text(
-            'v1.2.0 • JHT System',
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey[400],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ],
       ),
     );
